@@ -14,7 +14,7 @@
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
-#include <BLE2902.h>
+// BLE2902 removed to save flash
 #include <esp_bt.h>
 #include <esp_bt_main.h>
 #include <esp_gap_bt_api.h>
@@ -29,7 +29,6 @@
 int mode = 0;
 String targetMAC = "";
 String targetName = "";
-bool scanning = false;
 bool attacking = false;
 
 // BLE Scanner callback
@@ -82,10 +81,7 @@ void printMenu() {
 
 // ==================== BLE SCANNER ====================
 void startBLEScan() {
-    Serial.println("\n[*] Starting BLE Scan (10 seconds)...");
-    Serial.println("[*] MAC Address | RSSI | Name | UUID");
-    Serial.println("----------------------------------------");
-    
+    Serial.println("\n[*] BLE Scan 10s...");
     BLEDevice::init("");
     BLEScan* pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -94,8 +90,7 @@ void startBLEScan() {
     pBLEScan->setWindow(99);
     
     BLEScanResults* foundDevices = pBLEScan->start(10, false);
-    Serial.println("----------------------------------------");
-    Serial.print("[*] Scan complete. Found ");
+    Serial.print("[*] Found ");
     Serial.print(foundDevices->getCount());
     Serial.println(" devices.");
     
@@ -110,11 +105,8 @@ void startBLEDeauth() {
         return;
     }
     
-    Serial.println("\n[*] Starting BLE Deauth Attack...");
-    Serial.print("[*] Target: ");
+    Serial.print("\n[*] Deauth -> ");
     Serial.println(targetMAC);
-    Serial.println("[*] Press [6] to stop\n");
-    
     attacking = true;
     
     // Initialize BLE
@@ -161,15 +153,12 @@ void startBLEDeauth() {
     }
     
     BLEDevice::deinit(true);
-    Serial.println("[*] BLE Deauth stopped.");
+    Serial.println("[*] Deauth done.");
 }
 
 // ==================== BT JAMMER ====================
 void startBTJammer() {
-    Serial.println("\n[*] Starting Bluetooth Jammer...");
-    Serial.println("[*] Flooding all 79 BT channels (2402-2480 MHz)");
-    Serial.println("[*] Press [6] to stop\n");
-    
+    Serial.println("\n[*] Jammer...");
     attacking = true;
     
     // Initialize WiFi for noise generation
@@ -242,16 +231,11 @@ void startBTJammer() {
 // ==================== BT TARGETED JAM ====================
 void startTargetedJam() {
     if (targetMAC.length() == 0) {
-        Serial.println("[!] No target set! Use [5] to set target MAC.");
+        Serial.println("[!] No target! Use [5].");
         return;
     }
-    
-    Serial.println("\n[*] Starting Targeted BT Jam...");
-    Serial.print("[*] Target: ");
+    Serial.print("\n[*] Jam -> ");
     Serial.println(targetMAC);
-    Serial.println("[*] Flooding target with connection attempts");
-    Serial.println("[*] Press [6] to stop\n");
-    
     attacking = true;
     
     // Initialize BLE
@@ -307,12 +291,12 @@ void startTargetedJam() {
     }
     
     BLEDevice::deinit(true);
-    Serial.println("[*] Targeted jam stopped.");
+    Serial.println("[*] Jam done.");
 }
 
 // ==================== SET TARGET ====================
 void setTarget() {
-    Serial.println("\n[*] Enter target MAC address (format: AA:BB:CC:DD:EE:FF):");
+    Serial.println("\n[*] MAC (AA:BB:CC:DD:EE:FF):");
     
     while (!Serial.available()) {
         delay(100);
@@ -328,7 +312,7 @@ void setTarget() {
         Serial.print("[*] Target set to: ");
         Serial.println(targetMAC);
         
-        Serial.println("[*] Enter target name (optional, press Enter to skip):");
+        Serial.println("[*] Name (Enter skip):");
         delay(1000);
         if (Serial.available()) {
             String name = Serial.readStringUntil('\n');
@@ -340,7 +324,7 @@ void setTarget() {
             }
         }
     } else {
-        Serial.println("[!] Invalid MAC format! Use: AA:BB:CC:DD:EE:FF");
+        Serial.println("[!] Invalid MAC!");
     }
 }
 
@@ -390,7 +374,7 @@ void loop() {
             case '6':
                 attacking = false;
                 mode = 0;
-                Serial.println("[*] Attack stopped.");
+                Serial.println("[*] Stopped.");
                 break;
             case '0':
                 printMenu();
