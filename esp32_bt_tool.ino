@@ -19,6 +19,7 @@
 #include <esp_bt_main.h>
 #include <esp_gap_bt_api.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 
 // ==================== CONFIG ====================
 #define LED_PIN 2
@@ -92,10 +93,10 @@ void startBLEScan() {
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
     
-    BLEScanResults foundDevices = pBLEScan->start(10, false);
+    BLEScanResults* foundDevices = pBLEScan->start(10, false);
     Serial.println("----------------------------------------");
     Serial.print("[*] Scan complete. Found ");
-    Serial.print(foundDevices.getCount());
+    Serial.print(foundDevices->getCount());
     Serial.println(" devices.");
     
     pBLEScan->clearResults();
@@ -139,8 +140,8 @@ void startBLEDeauth() {
         BLEDevice::stopAdvertising();
         delay(50);
         
-        // Send fake pairing requests
-        esp_ble_gap_start_advertising(&pAdvertising->getParams());
+        // Send fake pairing requests (getParams removed in new BLE lib)
+        BLEDevice::startAdvertising();
         delay(100);
         
         count++;
